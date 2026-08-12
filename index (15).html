@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRT Journal</title>
+<meta name="theme-color" content="#0E1621">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600&family=Sarabun:wght@400;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0E1621;--surface:#16212F;--s2:#1D2B3C;--line:#2A3B4F;--gold:#E0B44C;
+  --dim:#8A7233;--up:#2FA36B;--down:#D9534F;--text:#E6EDF5;--muted:#8FA0B4;}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{margin:0;background:var(--ink);color:var(--text);font-family:"Sarabun",sans-serif;
+  font-size:15px;line-height:1.6;padding-bottom:78px;}
+h1,h2{font-family:"Kanit",sans-serif;font-weight:500;line-height:1.3;margin:0;}
+.wrap{max-width:640px;margin:0 auto;padding:0 14px;}
+.mono{font-family:"JetBrains Mono",monospace;}
+
+/* ---- login ---- */
+#login{position:fixed;inset:0;background:var(--ink);z-index:50;display:flex;
+  align-items:center;justify-content:center;padding:20px;}
+#login .box{max-width:380px;width:100%;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:2.5px;color:var(--gold);}
+#login h1{font-size:26px;margin:8px 0 4px;}
+#login p{color:var(--muted);font-size:13px;margin:0 0 18px;}
+#loginErr{color:var(--down);font-size:13px;min-height:20px;margin-top:8px;}
+
+header{padding:20px 0 14px;border-bottom:1px solid var(--line);}
+h1{font-size:21px;}
+.sync{display:flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:11px;color:var(--muted);margin-top:6px;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--muted);}
+.dot.ok{background:var(--up);} .dot.err{background:var(--down);} .dot.busy{background:var(--gold);}
+.rail{display:flex;align-items:center;gap:10px;margin:13px 0 2px;}
+.railbar{flex:1;height:9px;background:var(--s2);border:1px solid var(--line);border-radius:5px;position:relative;overflow:hidden;}
+.railfill{height:100%;background:linear-gradient(90deg,var(--dim),var(--gold));width:0%;transition:width .4s;}
+.railmid{position:absolute;left:50%;top:-3px;bottom:-3px;width:1px;background:var(--gold);opacity:.5;}
+.railtxt{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--gold);min-width:56px;text-align:right;}
+
+nav{display:flex;gap:6px;margin:14px 0 4px;}
+nav button{flex:1;background:var(--surface);border:1px solid var(--line);color:var(--muted);
+  padding:9px 4px;border-radius:7px;font-family:"Kanit";font-size:13px;}
+nav button.on{background:var(--gold);color:#12202E;border-color:var(--gold);}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0;}
+label{display:block;font-size:11.5px;color:var(--muted);margin:12px 0 5px;
+  font-family:"JetBrains Mono",monospace;letter-spacing:.4px;}
+label:first-child{margin-top:0;}
+.chips{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{background:var(--s2);border:1px solid var(--line);border-radius:16px;padding:6px 13px;font-size:13px;cursor:pointer;}
+.chip.on{background:var(--gold);color:#12202E;border-color:var(--gold);font-weight:600;}
+.chip.warn.on{background:var(--down);color:#fff;border-color:var(--down);}
+.chip.good.on{background:var(--up);color:#fff;border-color:var(--up);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+input,textarea{width:100%;background:var(--s2);border:1px solid var(--line);color:var(--text);
+  padding:11px;border-radius:7px;font-family:"JetBrains Mono",monospace;font-size:14px;}
+textarea{font-family:"Sarabun";min-height:52px;resize:vertical;}
+input:focus,textarea:focus{outline:none;border-color:var(--gold);}
+.calc{background:var(--s2);border-radius:7px;padding:10px 12px;margin-top:10px;
+  font-family:"JetBrains Mono",monospace;font-size:13px;}
+.calc b{color:var(--gold);}
+button.primary{width:100%;background:var(--gold);color:#12202E;border:none;padding:13px;
+  border-radius:8px;font-family:"Kanit";font-size:15px;font-weight:500;margin-top:14px;}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);
+  padding:9px 14px;border-radius:7px;font-family:"Kanit";font-size:13px;}
+.row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px;}
+.row:last-child{border-bottom:none;}
+.row .v{font-family:"JetBrains Mono",monospace;}
+.big{font-family:"Kanit";font-size:30px;color:var(--gold);line-height:1.1;}
+.pos{color:var(--up);} .neg{color:var(--down);}
+.trade{border-left:3px solid var(--line);background:var(--surface);border-radius:0 8px 8px 0;
+  padding:10px 12px;margin-bottom:8px;font-size:13px;}
+.trade.w{border-left-color:var(--up);} .trade.l{border-left-color:var(--down);}
+.trade .t1{display:flex;justify-content:space-between;font-family:"JetBrains Mono",monospace;font-size:12px;}
+.trade .meta{color:var(--muted);font-size:11.5px;margin-top:3px;}
+.del{color:var(--down);font-size:11px;background:none;border:none;padding:0;}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);
+  padding:9px 14px;display:flex;gap:8px;align-items:center;z-index:9;}
+.bar .st{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--muted);flex:1;}
+.hint{font-size:12px;color:var(--muted);background:var(--s2);border-left:2px solid var(--gold);
+  padding:8px 11px;border-radius:0 6px 6px 0;margin-top:10px;}
+.hide{display:none!important;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+td{padding:6px 2px;border-bottom:1px solid var(--line);}
+td:nth-child(2),td:nth-child(3){text-align:right;font-family:"JetBrains Mono",monospace;}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:88px;background:var(--up);
+  color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;z-index:60;opacity:0;
+  transition:opacity .3s;pointer-events:none;max-width:90%;text-align:center;}
+.toast.on{opacity:1;} .toast.bad{background:var(--down);}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="login">
+  <div class="box">
+    <div class="eyebrow">CRT · TBS · JOURNAL</div>
+    <h1>เข้าสู่ระบบ</h1>
+    <p>ข้อมูลถูกเก็บบนคลาวด์ของคุณเอง เปิดจากเครื่องไหนก็เห็นเหมือนกัน</p>
+    <label>ที่อยู่ API (Worker URL)</label>
+    <input id="apiUrl" placeholder="https://xxx.workers.dev" autocomplete="url">
+    <label>รหัสผ่าน</label>
+    <input id="apiToken" type="password" placeholder="APP_TOKEN ที่ตั้งไว้" autocomplete="current-password">
+    <div class="chips" style="margin-top:12px">
+      <div class="chip on" id="remember" data-on="1">จำไว้ในเครื่องนี้</div>
+    </div>
+    <button class="primary" id="loginBtn">เข้าสู่ระบบ</button>
+    <div id="loginErr"></div>
+  </div>
+</div>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">CRT · TBS · JOURNAL</div>
+  <h1>สมุดบันทึก 100 ไม้</h1>
+  <div class="sync"><span class="dot" id="dot"></span><span id="syncTxt">—</span></div>
+  <div class="rail">
+    <div class="railbar"><div class="railmid"></div><div class="railfill" id="rfill"></div></div>
+    <div class="railtxt" id="rtxt">0 / 100</div>
+  </div>
+</header>
+
+<nav>
+  <button class="on" data-tab="add">บันทึกไม้</button>
+  <button data-tab="stats">สถิติ</button>
+  <button data-tab="list">รายการ</button>
+</nav>
+
+<!-- ADD -->
+<div id="tab-add">
+<div class="card">
+  <label>สถานะไม้</label>
+  <div class="chips" data-f="taken">
+    <div class="chip on" data-v="เข้าไม้">เข้าไม้</div>
+    <div class="chip" data-v="ไม่เข้า">ไม่เข้า (บันทึกเหตุผล)</div>
+  </div>
+  <div id="fullForm">
+  <label>สินทรัพย์ / คู่ TF</label>
+  <div class="grid2"><input id="sym" value="XAUUSD"><input id="tfpair" value="1D↔1H"></div>
+  <label>ทิศทาง</label>
+  <div class="chips" data-f="dir"><div class="chip good" data-v="Buy">Buy</div><div class="chip warn" data-v="Sell">Sell</div></div>
+  <label>Quarter ที่ TBS เกิด (อ่านเวลาจากแกน x ของแท่ง ไม่ใช่เวลาตอนนี้)</label>
+  <div class="chips" data-f="q">
+    <div class="chip" data-v="Q1">Q1 · สะสม</div><div class="chip" data-v="Q2">Q2 · หลอก</div>
+    <div class="chip" data-v="Q3">Q3 · วิ่ง</div><div class="chip" data-v="Q4">Q4 · X</div>
+    <div class="chip" data-v="ทั้งวัน">ทั้งวัน (backtest 1D)</div>
+  </div>
+  <label>เกรด CRT Candle</label>
+  <div class="chips" data-f="grade"><div class="chip good" data-v="A+">A+ (body ≥ 0.6)</div><div class="chip warn" data-v="B+">B+</div></div>
+  <label>ชนิด Keylevel</label>
+  <div class="chips" data-f="key">
+    <div class="chip" data-v="FVG">FVG</div><div class="chip" data-v="OB">OB</div>
+    <div class="chip" data-v="OHP">OHP</div><div class="chip" data-v="OLP">OLP</div>
+    <div class="chip" data-v="RB">RB</div><div class="chip warn" data-v="ไม่มี">ไม่มี</div>
+  </div>
+  <label>ทริกเกอร์</label>
+  <div class="chips" data-f="trig"><div class="chip good" data-v="TBS">TBS (body ปิดผ่าน)</div><div class="chip warn" data-v="TWS">TWS (แค่ไส้)</div></div>
+  <label>โมเดลที่ใช้เข้า</label>
+  <div class="chips" data-f="model">
+    <div class="chip" data-v="M1 · OB">M1 · OB</div><div class="chip" data-v="M2 · FVG">M2 · FVG</div>
+    <div class="chip" data-v="M3 · BOS">M3 · BOS</div><div class="chip" data-v="HTF only">HTF only</div>
+  </div>
+  <label>ราคา — Entry / SL / TP1 (50%) / TP2</label>
+  <div class="grid2">
+    <input id="entry" type="number" step="any" placeholder="Entry">
+    <input id="sl" type="number" step="any" placeholder="SL">
+    <input id="tp1" type="number" step="any" placeholder="TP1 = 50%">
+    <input id="tp2" type="number" step="any" placeholder="TP2">
+  </div>
+  <div class="calc" id="rrCalc">กรอกราคาเพื่อคำนวณ RR</div>
+  <label>ผลลัพธ์</label>
+  <div class="chips" data-f="out">
+    <div class="chip warn" data-v="SL">โดน SL (−1R)</div><div class="chip" data-v="BE">Breakeven</div>
+    <div class="chip good" data-v="TP1">ถึง TP1</div><div class="chip good" data-v="TP2">ถึง TP2</div>
+    <div class="chip" data-v="ปิดเอง">ปิดเอง (กรอก R)</div>
+  </div>
+  <div id="manualR" class="hide"><label>ผลเป็น R</label><input id="rman" type="number" step="any"></div>
+  <label>Checklist 10 ข้อ ครบไหม</label>
+  <div class="chips" data-f="chk"><div class="chip good" data-v="10/10">ครบ 10/10</div><div class="chip warn" data-v="ไม่ครบ">ไม่ครบ</div></div>
+  </div>
+  <label>บทเรียน 1 บรรทัด</label>
+  <textarea id="note" placeholder="เช่น เกือบปิดไม้ตอนย่อ — แผนช่วยไว้"></textarea>
+  <button class="primary" id="saveBtn">บันทึกไม้นี้</button>
+  <div class="hint">ไม้ที่ตัดสินใจ<b>ไม่เข้า</b>ก็ต้องบันทึก — เป็นหลักฐานว่าคุณกรองได้</div>
+</div>
+</div>
+
+<!-- STATS -->
+<div id="tab-stats" class="hide">
+  <div class="card">
+    <div class="eyebrow">ผลรวม (นับเฉพาะไม้ที่เข้า)</div>
+    <div class="big" id="expBig">—</div>
+    <div style="color:var(--muted);font-size:12px;margin-bottom:8px">Expectancy ต่อไม้ (R)</div>
+    <div class="row"><span>จำนวนไม้ที่เข้า</span><span class="v" id="sN">0</span></div>
+    <div class="row"><span>อัตราชนะ</span><span class="v" id="sWR">—</span></div>
+    <div class="row"><span>กำไรเฉลี่ยเมื่อชนะ</span><span class="v" id="sAW">—</span></div>
+    <div class="row"><span>ขาดทุนเฉลี่ยเมื่อแพ้</span><span class="v" id="sAL">—</span></div>
+    <div class="row"><span>Profit Factor</span><span class="v" id="sPF">—</span></div>
+    <div class="row"><span>R สะสม</span><span class="v" id="sSum">—</span></div>
+    <div class="row"><span>Max Drawdown</span><span class="v" id="sDD">—</span></div>
+    <div class="row"><span>แพ้ติดกันสูงสุด</span><span class="v" id="sStreak">—</span></div>
+  </div>
+  <div class="card"><div class="eyebrow">แยกตาม QUARTER</div><table id="tQ"></table>
+    <div class="hint" id="qVerdict">ต้องมีอย่างน้อย 30 ไม้ถึงจะเริ่มอ่านผลได้</div></div>
+  <div class="card"><div class="eyebrow">แยกตาม KEYLEVEL</div><table id="tK"></table></div>
+  <div class="card"><div class="eyebrow">แยกตาม MODEL</div><table id="tM"></table></div>
+  <div class="card"><div class="eyebrow">เกรด / ทริกเกอร์ / วินัย</div><table id="tG"></table></div>
+</div>
+
+<!-- LIST -->
+<div id="tab-list" class="hide">
+  <div class="card" style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="ghost" id="pullBtn" style="flex:1">ดึงข้อมูลล่าสุด</button>
+    <button class="ghost" id="csvBtn" style="flex:1">คัดลอกเป็นตาราง</button>
+    <button class="ghost" id="logoutBtn">ออกจากระบบ</button>
+  </div>
+  <div class="card hide" id="csvPanel">
+    <div class="eyebrow">คัดลอกไปวางใน GOOGLE SHEETS</div>
+    <textarea id="csvArea" readonly style="min-height:110px;font-family:'JetBrains Mono',monospace;font-size:11px"></textarea>
+    <button class="primary" id="copyBtn">คัดลอกข้อมูล</button>
+  </div>
+  <div id="listBox"></div>
+</div>
+</div>
+
+<div class="bar">
+  <span class="st" id="statusTxt">—</span>
+  <button class="ghost" id="syncBtn">ซิงก์เดี๋ยวนี้</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- storage helper (กัน localStorage ถูกบล็อก) ---------- */
+const mem={};
+const store={
+  get(k){ try{return localStorage.getItem(k);}catch(e){return mem[k]??null;} },
+  set(k,v){ try{localStorage.setItem(k,v);}catch(e){mem[k]=v;} },
+  del(k){ try{localStorage.removeItem(k);}catch(e){delete mem[k];} }
+};
+
+let API='', TOKEN='', trades=[], dirty=false;
+const DEVICE = /Mobi|Android/i.test(navigator.userAgent)?'มือถือ':'คอมพิวเตอร์';
+let sel={taken:'เข้าไม้',dir:null,q:null,grade:null,key:null,trig:null,model:null,out:null,chk:null};
+
+function toast(m,bad){const t=document.getElementById('toast');t.textContent=m;
+  t.className='toast on'+(bad?' bad':'');setTimeout(()=>t.className='toast',2400);}
+function setSync(state,txt){const d=document.getElementById('dot');
+  d.className='dot '+state; document.getElementById('syncTxt').textContent=txt;}
+
+/* ---------- api ---------- */
+async function api(path,method,body){
+  const r=await fetch(API.replace(/\/$/,'')+path,{
+    method:method||'GET',
+    headers:{'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'},
+    body:body?JSON.stringify(body):undefined
+  });
+  if(r.status===401) throw new Error('รหัสผ่านไม่ถูกต้อง');
+  if(!r.ok){ let m='เชื่อมต่อไม่สำเร็จ ('+r.status+')';
+    try{const j=await r.json(); if(j.error)m=j.error;}catch(e){} throw new Error(m); }
+  return r.json();
+}
+async function pull(){
+  setSync('busy','กำลังดึงข้อมูล…');
+  try{
+    const d=await api('/api/journal');
+    trades=d.trades||[];
+    setSync('ok','ซิงก์แล้ว · '+(d.updatedAt?new Date(d.updatedAt).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}):'ยังว่าง')+(d.device?' · '+d.device:''));
+    dirty=false; render();
+  }catch(e){ setSync('err',e.message); }
+}
+async function push(){
+  if(!API){return;}
+  setSync('busy','กำลังบันทึก…');
+  try{
+    const d=await api('/api/journal','PUT',{trades,device:DEVICE});
+    setSync('ok','ซิงก์แล้ว · '+new Date(d.updatedAt).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}));
+    dirty=false;
+  }catch(e){ dirty=true; setSync('err','ยังไม่ได้บันทึกขึ้นคลาวด์ — '+e.message); }
+  render();
+}
+
+/* ---------- login ---------- */
+document.getElementById('remember').addEventListener('click',function(){
+  this.classList.toggle('on'); this.dataset.on=this.classList.contains('on')?'1':'0';
+});
+async function doLogin(url,token,remember){
+  const errEl=document.getElementById('loginErr'); errEl.textContent='';
+  if(!url||!token){errEl.textContent='กรอกให้ครบทั้งสองช่อง';return;}
+  API=url.trim(); TOKEN=token.trim();
+  try{
+    await api('/api/ping');
+    if(remember){ store.set('crt_api',API); store.set('crt_token',TOKEN); }
+    document.getElementById('login').classList.add('hide');
+    await pull();
+  }catch(e){ errEl.textContent=e.message; API=''; TOKEN=''; }
+}
+document.getElementById('loginBtn').addEventListener('click',()=>{
+  doLogin(document.getElementById('apiUrl').value,document.getElementById('apiToken').value,
+    document.getElementById('remember').dataset.on==='1');
+});
+document.getElementById('apiToken').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginBtn').click();});
+document.getElementById('logoutBtn').addEventListener('click',()=>{
+  if(dirty && !confirm('ยังมีข้อมูลที่ยังไม่ได้ซิงก์ ออกจากระบบเลยไหม'))return;
+  store.del('crt_api'); store.del('crt_token'); location.reload();
+});
+
+/* ---------- chips + rr ---------- */
+document.querySelectorAll('.chips[data-f]').forEach(g=>{
+  const f=g.dataset.f;
+  g.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+    g.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on'); sel[f]=c.dataset.v;
+    if(f==='out') document.getElementById('manualR').classList.toggle('hide',c.dataset.v!=='ปิดเอง');
+    if(f==='taken') document.getElementById('fullForm').classList.toggle('hide',c.dataset.v==='ไม่เข้า');
+  }));
+});
+['entry','sl','tp1','tp2'].forEach(id=>document.getElementById(id).addEventListener('input',rr));
+function rr(){
+  const e=+entry.value,s=+sl.value,t1=+tp1.value,t2=+tp2.value;
+  if(!e||!s){rrCalc.textContent='กรอกราคาเพื่อคำนวณ RR';return;}
+  const risk=Math.abs(e-s);
+  const r1=t1?Math.abs(t1-e)/risk:0, r2=t2?Math.abs(t2-e)/risk:0, ok=r1>=2;
+  rrCalc.innerHTML=`ความเสี่ยง <b>${risk.toFixed(2)}</b> จุด · TP1 = <b>1:${r1.toFixed(2)}</b>`
+    +(r2?` · TP2 = <b>1:${r2.toFixed(2)}</b>`:'')
+    +`<br><span style="color:${ok?'var(--up)':'var(--down)'}">${ok?'✓ ผ่านเกณฑ์ 1:2':'✗ ต่ำกว่า 1:2 — ตามกฎคือไม่เข้า'}</span>`;
+}
+
+/* ---------- save ---------- */
+document.getElementById('saveBtn').addEventListener('click',async()=>{
+  const taken=sel.taken==='เข้าไม้';
+  if(taken&&(!sel.q||!sel.out)){toast('เลือก Quarter และผลลัพธ์ก่อน',1);return;}
+  let R=0;
+  if(taken){
+    const e=+entry.value,s=+sl.value,t1=+tp1.value,t2=+tp2.value,risk=Math.abs(e-s);
+    if(sel.out==='SL')R=-1; else if(sel.out==='BE')R=0;
+    else if(sel.out==='TP1')R=risk?Math.abs(t1-e)/risk:0;
+    else if(sel.out==='TP2')R=risk?Math.abs(t2-e)/risk:0;
+    else R=+document.getElementById('rman').value||0;
+  }
+  trades.push({d:new Date().toISOString(),taken,sym:sym.value,tf:tfpair.value,dir:sel.dir,q:sel.q,
+    grade:sel.grade,key:sel.key,trig:sel.trig,model:sel.model,e:+entry.value||null,s:+sl.value||null,
+    t1:+tp1.value||null,t2:+tp2.value||null,out:sel.out,R:+R.toFixed(2),chk:sel.chk,note:note.value,dev:DEVICE});
+  ['entry','sl','tp1','tp2','note'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('rman').value=''; rrCalc.textContent='กรอกราคาเพื่อคำนวณ RR';
+  render(); toast('บันทึกแล้ว — ไม้ที่ '+trades.length); await push();
+});
+document.getElementById('syncBtn').addEventListener('click',push);
+document.getElementById('pullBtn').addEventListener('click',()=>{
+  if(dirty&&!confirm('มีข้อมูลที่ยังไม่ได้บันทึกขึ้นคลาวด์ การดึงจะทับข้อมูลในเครื่อง ทำต่อไหม'))return;
+  pull();
+});
+
+/* ---------- stats ---------- */
+function agg(list){
+  const t=list.filter(x=>x.taken); if(!t.length)return null;
+  const w=t.filter(x=>x.R>0),l=t.filter(x=>x.R<0);
+  const aw=w.length?w.reduce((a,b)=>a+b.R,0)/w.length:0;
+  const al=l.length?Math.abs(l.reduce((a,b)=>a+b.R,0)/l.length):0;
+  const wr=w.length/t.length;
+  return{n:t.length,wr,aw,al,exp:wr*aw-(1-wr)*al,sum:t.reduce((a,b)=>a+b.R,0),
+    pf:l.length?w.reduce((a,b)=>a+b.R,0)/Math.abs(l.reduce((a,b)=>a+b.R,0)):null};
+}
+function group(f){const m={};trades.filter(x=>x.taken&&x[f]).forEach(x=>{(m[x[f]]=m[x[f]]||[]).push(x);});
+  return Object.entries(m).map(([k,v])=>[k,agg(v)]).sort((a,b)=>a[0].localeCompare(b[0]));}
+function tbl(el,rows){el.innerHTML=rows.length?rows.map(([k,a])=>
+  `<tr><td>${k}</td><td>${a.n} ไม้</td><td class="${a.exp>0?'pos':'neg'}">${a.exp>0?'+':''}${a.exp.toFixed(2)}R</td></tr>`).join('')
+  :'<tr><td style="color:var(--muted)">ยังไม่มีข้อมูล</td></tr>';}
+
+function render(){
+  const n=trades.length;
+  document.getElementById('rfill').style.width=Math.min(100,n)+'%';
+  document.getElementById('rtxt').textContent=n+' / 100';
+  const taken=trades.filter(x=>x.taken).length;
+  document.getElementById('statusTxt').textContent=
+    `${n} ไม้ · เข้า ${taken} · ไม่เข้า ${n-taken}`+(dirty?' · ยังไม่ซิงก์':'');
+  const a=agg(trades);
+  if(a){
+    expBig.textContent=(a.exp>0?'+':'')+a.exp.toFixed(2)+'R';
+    expBig.style.color=a.exp>0?'var(--up)':'var(--down)';
+    sN.textContent=a.n; sWR.textContent=(a.wr*100).toFixed(0)+'%';
+    sAW.textContent='+'+a.aw.toFixed(2)+'R'; sAL.textContent='−'+a.al.toFixed(2)+'R';
+    sPF.textContent=a.pf?a.pf.toFixed(2):'—';
+    sSum.textContent=(a.sum>0?'+':'')+a.sum.toFixed(2)+'R';
+    let eq=0,pk=0,dd=0,st=0,mx=0;
+    trades.filter(x=>x.taken).forEach(x=>{eq+=x.R;pk=Math.max(pk,eq);dd=Math.min(dd,eq-pk);
+      if(x.R<0){st++;mx=Math.max(mx,st);}else st=0;});
+    sDD.textContent=dd.toFixed(2)+'R'; sStreak.textContent=mx+' ไม้';
+  }
+  tbl(document.getElementById('tQ'),group('q'));
+  tbl(document.getElementById('tK'),group('key'));
+  tbl(document.getElementById('tM'),group('model'));
+  tbl(document.getElementById('tG'),[...group('grade'),...group('trig'),...group('chk')]);
+  const qn=trades.filter(x=>x.taken&&x.q).length, qv=document.getElementById('qVerdict');
+  if(qn<30) qv.innerHTML=`มี ${qn} ไม้ · <b>ต้องถึง 30 ไม้ก่อนถึงจะเริ่มอ่านผลได้</b>`;
+  else{ const g=Object.fromEntries(group('q'));
+    qv.innerHTML=(g.Q2&&g.Q1)
+      ? `Q2 = ${g.Q2.exp.toFixed(2)}R · Q1 = ${g.Q1.exp.toFixed(2)}R — ${g.Q2.exp>g.Q1.exp+0.15?'ตัวกรอง QT ดูมีค่าในตลาดของคุณ':'<b>ยังไม่ต่างกันชัด</b> เก็บเพิ่มถึง 100 ไม้'}`
+      : 'เก็บให้ครบทุก Quarter ก่อนถึงจะเปรียบเทียบได้';}
+  document.getElementById('listBox').innerHTML=n?trades.slice().reverse().map((x,i)=>{
+    const idx=n-i, real=n-1-i;
+    if(!x.taken)return `<div class="trade"><div class="t1"><span>#${idx} · ไม่เข้า</span>
+      <button class="del" data-i="${real}">ลบ</button></div>
+      <div class="meta">${new Date(x.d).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})} · ${x.note||'—'}</div></div>`;
+    return `<div class="trade ${x.R>0?'w':x.R<0?'l':''}"><div class="t1">
+      <span>#${idx} ${x.sym} ${x.dir||''} ${x.q||''}</span>
+      <span class="${x.R>0?'pos':x.R<0?'neg':''}">${x.R>0?'+':''}${x.R}R</span></div>
+      <div class="meta">${[x.tf,x.grade,x.key,x.trig,x.model,x.out,x.chk].filter(Boolean).join(' · ')}</div>
+      ${x.note?`<div class="meta">"${x.note}"</div>`:''}
+      <button class="del" data-i="${real}">ลบ</button></div>`;
+  }).join(''):'<div class="card" style="color:var(--muted)">ยังไม่มีไม้ที่บันทึก</div>';
+  document.querySelectorAll('.del').forEach(b=>b.addEventListener('click',async()=>{
+    trades.splice(+b.dataset.i,1); render(); await push();
+  }));
+}
+
+/* ---------- export ---------- */
+function buildTSV(){
+  const h=['datetime','taken','symbol','tf','direction','quarter','grade','keylevel','trigger','model','entry','sl','tp1','tp2','outcome','R','checklist','device','note'];
+  return [h,...trades.map(x=>[x.d,x.taken?'yes':'no',x.sym,x.tf,x.dir,x.q,x.grade,x.key,x.trig,x.model,
+    x.e,x.s,x.t1,x.t2,x.out,x.R,x.chk,x.dev,(x.note||'').replace(/[\t\n\r]/g,' ')])]
+    .map(r=>r.map(v=>v==null?'':String(v)).join('\t')).join('\n');
+}
+document.getElementById('csvBtn').addEventListener('click',()=>{
+  if(!trades.length){toast('ยังไม่มีข้อมูล',1);return;}
+  document.getElementById('csvArea').value=buildTSV();
+  document.getElementById('csvPanel').classList.remove('hide');
+});
+document.getElementById('copyBtn').addEventListener('click',()=>{
+  const ta=document.getElementById('csvArea'); ta.focus(); ta.select(); ta.setSelectionRange(0,999999);
+  let ok=false; try{ok=document.execCommand('copy');}catch(e){}
+  if(!ok&&navigator.clipboard){navigator.clipboard.writeText(ta.value)
+    .then(()=>toast('คัดลอกแล้ว'),()=>toast('กดค้างที่กล่องแล้วคัดลอกเอง',1));return;}
+  toast(ok?'คัดลอกแล้ว — ไปวางใน Google Sheets':'กดค้างที่กล่องแล้วคัดลอกเอง',!ok);
+});
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  ['add','stats','list'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('hide',t!==b.dataset.tab));
+  window.scrollTo({top:0});
+}));
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
+
+/* ---------- auto login ---------- */
+(function(){
+  const u=store.get('crt_api'), t=store.get('crt_token');
+  if(u&&t){ document.getElementById('apiUrl').value=u; document.getElementById('apiToken').value=t;
+    doLogin(u,t,true); }
+})();
+</script>
+</body>
+</html>
