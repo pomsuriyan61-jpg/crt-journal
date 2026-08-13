@@ -96,30 +96,33 @@ td:nth-child(2),td:nth-child(3){text-align:right;font-family:"JetBrains Mono",mo
 <div id="login">
   <div class="box">
     <div class="eyebrow">CRT · TBS · JOURNAL</div>
-    <h1 id="authTitle">เข้าสู่ระบบ</h1>
-    <p>ข้อมูลถูกเก็บบนคลาวด์ของคุณเอง เปิดจากเครื่องไหนก็เห็นเหมือนกัน</p>
+    <h1>เปิดสมุดบันทึก</h1>
+    <p>ใช้รหัสสมุดเดียวกันทุกเครื่อง ข้อมูลจะตามไปด้วย</p>
 
     <div class="chips" style="margin-bottom:14px">
-      <div class="chip on" id="tabLogin">เข้าสู่ระบบ</div>
-      <div class="chip" id="tabReg">สมัครสมาชิก</div>
+      <div class="chip on" id="tabNew">สร้างสมุดใหม่</div>
+      <div class="chip" id="tabOpen">มีรหัสอยู่แล้ว</div>
     </div>
 
-    <label>ที่อยู่ API (Worker URL)</label>
-    <input id="apiUrl" placeholder="https://xxx.workers.dev" autocomplete="url" inputmode="url">
-    <label>ชื่อผู้ใช้</label>
-    <input id="uname" placeholder="a-z 0-9 . _ -" autocomplete="username" autocapitalize="none">
-    <label>รหัสผ่าน</label>
-    <input id="pword" type="password" placeholder="อย่างน้อย 8 ตัว มีตัวอักษรและตัวเลข" autocomplete="current-password">
-    <div id="regExtra" class="hide">
-      <label>ยืนยันรหัสผ่าน</label>
-      <input id="pword2" type="password" autocomplete="new-password">
-      <label>รหัสเชิญ (ถ้าระบบตั้งไว้)</label>
-      <input id="invite" placeholder="เว้นว่างได้ถ้าไม่ได้ตั้ง">
+    <div id="paneNew">
+      <label>รหัสสมุดของคุณ</label>
+      <input id="newCode" readonly style="letter-spacing:1px;font-size:16px;color:var(--gold)">
+      <div class="hint" style="margin-top:10px">
+        <b>บันทึกรหัสนี้ไว้ทันที</b> — จดใส่โน้ตมือถือหรือถ่ายหน้าจอ
+        ถ้าลืมจะเข้าข้อมูลเดิมไม่ได้อีก และไม่มีระบบกู้คืน
+      </div>
+      <div style="display:flex;gap:8px;margin-top:9px">
+        <button class="ghost" id="copyCode" style="flex:1">คัดลอกรหัส</button>
+        <button class="ghost" id="regen">สุ่มใหม่</button>
+      </div>
     </div>
-    <div class="chips" style="margin-top:12px">
-      <div class="chip on" id="remember" data-on="1">จำไว้ในเครื่องนี้</div>
+
+    <div id="paneOpen" class="hide">
+      <label>รหัสสมุด</label>
+      <input id="openCode" placeholder="วางรหัสที่บันทึกไว้" autocapitalize="none" spellcheck="false">
     </div>
-    <button class="primary" id="authBtn">เข้าสู่ระบบ</button>
+
+    <button class="primary" id="authBtn">เปิดสมุด</button>
     <div id="loginErr"></div>
   </div>
 </div>
@@ -227,8 +230,8 @@ td:nth-child(2),td:nth-child(3){text-align:right;font-family:"JetBrains Mono",mo
   <div class="card" style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="ghost" id="pullBtn" style="flex:1">ดึงข้อมูลล่าสุด</button>
     <button class="ghost" id="csvBtn" style="flex:1">คัดลอกเป็นตาราง</button>
-    <button class="ghost" id="pwBtn">เปลี่ยนรหัสผ่าน</button>
-    <button class="ghost" id="logoutBtn">ออกจากระบบ</button>
+    <button class="ghost" id="pwBtn">ดูรหัสสมุด</button>
+    <button class="ghost" id="logoutBtn">ปิดสมุด</button>
   </div>
   <div class="card hide" id="csvPanel">
     <div class="eyebrow">คัดลอกไปวางใน GOOGLE SHEETS</div>
@@ -254,7 +257,10 @@ const store={
   del(k){ try{localStorage.removeItem(k);}catch(e){delete mem[k];} }
 };
 
-let API='', TOKEN='', USER='', trades=[], dirty=false, mode='login';
+/* ===== แก้ตรงนี้ที่เดียวถ้าเปลี่ยน Worker ===== */
+const API_URL='https://crt-journal-api.pomsuriyan61.workers.dev';
+/* ============================================ */
+let CODE='', trades=[], dirty=false;
 const DEVICE = /Mobi|Android/i.test(navigator.userAgent)?'มือถือ':'คอมพิวเตอร์';
 let sel={taken:'เข้าไม้',dir:null,q:null,grade:null,key:null,trig:null,model:null,out:null,chk:null};
 
@@ -262,105 +268,101 @@ function toast(m,bad){const t=document.getElementById('toast');t.textContent=m;
   t.className='toast on'+(bad?' bad':'');setTimeout(()=>t.className='toast',2600);}
 function setSync(state,txt){document.getElementById('dot').className='dot '+state;
   document.getElementById('syncTxt').textContent=txt;}
-
-async function api(path,method,body,noAuth){
-  const headers={'Content-Type':'application/json'};
-  if(!noAuth&&TOKEN) headers['Authorization']='Bearer '+TOKEN;
-  const r=await fetch(API.replace(/\/$/,'')+path,{method:method||'GET',headers,
-    body:body?JSON.stringify(body):undefined});
+function makeCode(){
+  const abc='abcdefghjkmnpqrstuvwxyz23456789'; // ตัดตัวที่สับสน 0 o 1 l i
+  return [...crypto.getRandomValues(new Uint8Array(20))].map(b=>abc[b%abc.length]).join('');
+}
+async function api(path,method,body){
+  let r;
+  try{
+    r=await fetch(API_URL.replace(/\/$/,'')+path,{method:method||'GET',
+      headers:{'Content-Type':'application/json'},
+      body:body?JSON.stringify(body):undefined});
+  }catch(err){
+    throw new Error('ติดต่อ Worker ไม่ได้ — เช็ค ALLOWED_ORIGIN ให้ตรงกับ '+location.origin);
+  }
   let data={}; try{data=await r.json();}catch(e){}
   if(!r.ok){
-    if(r.status===401&&TOKEN&&path!=='/api/login'){ forceLogout('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่'); }
+    if(r.status===404) throw new Error('Worker ยังเป็นโค้ดเวอร์ชันเก่า — เอา worker.js ตัวใหม่ไปวางแล้ว Deploy ก่อน');
     throw new Error(data.error||('เชื่อมต่อไม่สำเร็จ ('+r.status+')'));
   }
   return data;
 }
-function forceLogout(msg){
-  TOKEN=''; USER=''; store.del('crt_token'); store.del('crt_user');
-  document.getElementById('login').classList.remove('hide');
-  document.getElementById('loginErr').textContent=msg||'';
-}
 async function pull(){
   setSync('busy','กำลังดึงข้อมูล…');
   try{
-    const d=await api('/api/journal');
+    const d=await api('/api/book/'+CODE);
     trades=d.trades||[];
-    setSync('ok',USER+' · '+(d.updatedAt?new Date(d.updatedAt).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}):'ยังว่าง')+(d.device?' · '+d.device:''));
+    setSync('ok', d.isNew? 'สมุดใหม่ · พร้อมบันทึก'
+      : 'ซิงก์แล้ว '+new Date(d.updatedAt).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})+(d.device?' · '+d.device:''));
     dirty=false; render();
   }catch(e){ setSync('err',e.message); }
 }
 async function push(){
-  if(!TOKEN) return;
+  if(!CODE) return;
   setSync('busy','กำลังบันทึก…');
   try{
-    const d=await api('/api/journal','PUT',{trades,device:DEVICE});
-    setSync('ok',USER+' · ซิงก์แล้ว '+new Date(d.updatedAt).toLocaleTimeString('th-TH',{timeStyle:'short'}));
+    const d=await api('/api/book/'+CODE,'PUT',{trades,device:DEVICE});
+    setSync('ok','ซิงก์แล้ว '+new Date(d.updatedAt).toLocaleTimeString('th-TH',{timeStyle:'short'}));
     dirty=false;
   }catch(e){ dirty=true; setSync('err','ยังไม่ได้บันทึกขึ้นคลาวด์ — '+e.message); }
   render();
 }
 
-/* ---------- auth ui ---------- */
-function setMode(m){
-  mode=m;
-  document.getElementById('tabLogin').classList.toggle('on',m==='login');
-  document.getElementById('tabReg').classList.toggle('on',m==='register');
-  document.getElementById('regExtra').classList.toggle('hide',m!=='register');
-  document.getElementById('authTitle').textContent=m==='login'?'เข้าสู่ระบบ':'สมัครสมาชิก';
-  document.getElementById('authBtn').textContent=m==='login'?'เข้าสู่ระบบ':'สมัครสมาชิก';
-  document.getElementById('pword').setAttribute('autocomplete',m==='login'?'current-password':'new-password');
-  document.getElementById('loginErr').textContent='';
-}
-document.getElementById('tabLogin').addEventListener('click',()=>setMode('login'));
-document.getElementById('tabReg').addEventListener('click',()=>setMode('register'));
-document.getElementById('remember').addEventListener('click',function(){
-  this.classList.toggle('on'); this.dataset.on=this.classList.contains('on')?'1':'0';
+/* ---------- หน้าเปิดสมุด ---------- */
+let mode='new';
+document.getElementById('newCode').value=makeCode();
+document.getElementById('tabNew').addEventListener('click',()=>{
+  mode='new'; document.getElementById('tabNew').classList.add('on');
+  document.getElementById('tabOpen').classList.remove('on');
+  document.getElementById('paneNew').classList.remove('hide');
+  document.getElementById('paneOpen').classList.add('hide');
+  document.getElementById('authBtn').textContent='เปิดสมุด'; document.getElementById('loginErr').textContent='';
 });
-
-async function doAuth(){
+document.getElementById('tabOpen').addEventListener('click',()=>{
+  mode='open'; document.getElementById('tabOpen').classList.add('on');
+  document.getElementById('tabNew').classList.remove('on');
+  document.getElementById('paneOpen').classList.remove('hide');
+  document.getElementById('paneNew').classList.add('hide');
+  document.getElementById('authBtn').textContent='เปิดสมุด'; document.getElementById('loginErr').textContent='';
+});
+document.getElementById('regen').addEventListener('click',()=>{
+  document.getElementById('newCode').value=makeCode();
+});
+document.getElementById('copyCode').addEventListener('click',()=>{
+  const el=document.getElementById('newCode'); el.removeAttribute('readonly');
+  el.focus(); el.select(); el.setSelectionRange(0,999);
+  let ok=false; try{ok=document.execCommand('copy');}catch(e){}
+  el.setAttribute('readonly','');
+  if(!ok&&navigator.clipboard){navigator.clipboard.writeText(el.value)
+    .then(()=>toast('คัดลอกแล้ว บันทึกไว้ด้วยนะ'),()=>toast('กดค้างที่ช่องแล้วคัดลอกเอง',1));return;}
+  toast(ok?'คัดลอกแล้ว บันทึกไว้ด้วยนะ':'กดค้างที่ช่องแล้วคัดลอกเอง',!ok);
+});
+async function openBook(){
   const err=document.getElementById('loginErr'); err.textContent='';
-  const url=document.getElementById('apiUrl').value.trim();
-  const u=document.getElementById('uname').value.trim().toLowerCase();
-  const p=document.getElementById('pword').value;
-  if(!url||!u||!p){ err.textContent='กรอกให้ครบทุกช่อง'; return; }
-  API=url;
+  const code=(mode==='new'?document.getElementById('newCode').value
+                          :document.getElementById('openCode').value).trim();
+  if(!/^[a-zA-Z0-9_-]{12,48}$/.test(code)){
+    err.textContent='รหัสไม่ถูกต้อง ต้องเป็นตัวอักษร/ตัวเลข 12–48 ตัว'; return;
+  }
   const btn=document.getElementById('authBtn'); btn.disabled=true;
+  CODE=code;
   try{
-    if(mode==='register'){
-      if(p!==document.getElementById('pword2').value) throw new Error('รหัสผ่านสองช่องไม่ตรงกัน');
-      await api('/api/register','POST',{username:u,password:p,
-        invite:document.getElementById('invite').value.trim()},true);
-      toast('สมัครสำเร็จ กำลังเข้าสู่ระบบ');
-    }
-    const r=await api('/api/login','POST',{username:u,password:p},true);
-    TOKEN=r.token; USER=r.username;
-    store.set('crt_api',API);
-    if(document.getElementById('remember').dataset.on==='1'){
-      store.set('crt_token',TOKEN); store.set('crt_user',USER);
-    }
-    document.getElementById('pword').value=''; 
-    const p2=document.getElementById('pword2'); if(p2) p2.value='';
+    await api('/api/book/'+CODE);
+    store.set('crt_code',CODE);
     document.getElementById('login').classList.add('hide');
     await pull();
-  }catch(e){ err.textContent=e.message; }
+  }catch(e){ err.textContent=e.message; CODE=''; }
   finally{ btn.disabled=false; }
 }
-document.getElementById('authBtn').addEventListener('click',doAuth);
-['apiUrl','uname','pword','pword2','invite'].forEach(id=>{
-  const el=document.getElementById(id);
-  if(el) el.addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();});
+document.getElementById('authBtn').addEventListener('click',openBook);
+document.getElementById('openCode').addEventListener('keydown',e=>{if(e.key==='Enter')openBook();});
+document.getElementById('logoutBtn').addEventListener('click',()=>{
+  if(dirty&&!confirm('ยังมีข้อมูลที่ยังไม่ได้ซิงก์ ปิดสมุดเลยไหม'))return;
+  store.del('crt_code'); location.reload();
 });
-document.getElementById('logoutBtn').addEventListener('click',async()=>{
-  if(dirty&&!confirm('ยังมีข้อมูลที่ยังไม่ได้ซิงก์ ออกจากระบบเลยไหม'))return;
-  try{ await api('/api/logout','POST',{}); }catch(e){}
-  store.del('crt_token'); store.del('crt_user'); location.reload();
-});
-document.getElementById('pwBtn').addEventListener('click',async()=>{
-  const oldP=prompt('รหัสผ่านเดิม'); if(!oldP)return;
-  const newP=prompt('รหัสผ่านใหม่ (อย่างน้อย 8 ตัว มีตัวอักษรและตัวเลข)'); if(!newP)return;
-  try{ const r=await api('/api/password','POST',{oldPassword:oldP,newPassword:newP});
-    toast(r.message||'เปลี่ยนแล้ว'); }
-  catch(e){ toast(e.message,1); }
+document.getElementById('pwBtn').addEventListener('click',()=>{
+  prompt('รหัสสมุดของคุณ (คัดลอกเก็บไว้)', CODE);
 });
 
 /* ---------- chips + rr ---------- */
@@ -499,19 +501,13 @@ document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()
 }));
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
 
-/* ---------- auto login ---------- */
+/* ---------- เปิดสมุดอัตโนมัติ ---------- */
 (async function(){
-  const u=store.get('crt_api'), t=store.get('crt_token'), n=store.get('crt_user');
-  if(u) document.getElementById('apiUrl').value=u;
-  if(n) document.getElementById('uname').value=n;
-  if(u&&t){
-    API=u; TOKEN=t; USER=n||'';
-    try{
-      const me=await api('/api/me');
-      USER=me.username;
-      document.getElementById('login').classList.add('hide');
-      await pull();
-    }catch(e){ forceLogout(''); }
+  const c=store.get('crt_code');
+  if(c){
+    CODE=c;
+    try{ document.getElementById('login').classList.add('hide'); await pull(); }
+    catch(e){ document.getElementById('login').classList.remove('hide'); }
   }
 })();
 </script>
